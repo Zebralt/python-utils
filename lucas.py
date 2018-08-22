@@ -80,9 +80,9 @@ class Scraper:
         if driver:
             self.driver = driver
         if url:
-            self.load(url)
+            self.get(url)
     
-    def get(self, url):
+    def get(self, url, autocompletion=True):
         """
         Scrap an URL using the requests module. Returned data goes into `self.page`, whereas
         raw HTML can be found in `self.html` and the lxml tree in `self.tree`. This function
@@ -90,11 +90,17 @@ class Scraper:
         website you want to scrap makes heavy use of Javascript to display content, you need
         to use `get_full`.
         """
+        if autocompletion:
+            nurl = complete_url(url)
+            if nurl != url:
+                print('\'{}\' autocompleted to \'{}\'.'.format(url, nurl))
+            url = nurl
+
         self.page = requests.get(url)
         self.html = self.page.content
         self.tree = html.fromstring(self.html)
 
-    def get_full(self, url, driver=None, headless=True):
+    def get_full(self, url, driver=None, headless=True, autocompletion=True):
         """
         Scrap an URL using selenium. If you want client-side scripts to be executed before scraping,
         this is the function you should use rather than `get`. With selenium, we can load the page
@@ -123,6 +129,12 @@ class Scraper:
             self.driver = webdriver.Chrome('chromedriver', chrome_options=opt)
         else:
             self.driver = driver
+
+        if autocompletion:
+            nurl = complete_url(url)
+            if nurl != url:
+                print('\'{}\' autocompleted to \'{}\'.'.format(url, nurl))
+            url = nurl
 
         self.driver.get(url)
         self.html = self.driver.page_source
