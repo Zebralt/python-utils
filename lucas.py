@@ -145,7 +145,7 @@ class Scraper:
 if __name__ == '__main__':
     sc = Scraper()
     url = 'https://www.google.com'
-    sc.load(url)
-    results = sc.xpath('//a')
+    sc.get(url)
+    results = sc.xpath('//a/@href')
     print(results)
     
