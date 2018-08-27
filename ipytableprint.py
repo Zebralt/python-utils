@@ -36,7 +36,7 @@ styles.highlight = highlight_style
 
 def print_table(tuples, 
                  headers=[], 
-                 headerUpper=False,
+                 headerUpper=True,
                  title=None,
                  colsize=[],
                  ellipsis=True, 

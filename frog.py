@@ -75,6 +75,7 @@ def rimmutable(stream, data):
 
 class CC:
     def __init__(self, stream, metafunc):
+        print('target:', stream)
         self.stream, self.metafunc = stream, metafunc
         
     def __call__(self, func, *args, **kwargs):
