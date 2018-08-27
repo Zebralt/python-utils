@@ -126,7 +126,10 @@ class Stream:
     
     def __getitem__(self, d):
         return Stream(self.data[d])
-    
+
+    def __setitem__(self, idx, value):
+        self.data[idx] = value
+
     def __len__(self):
         return len(self.data)
     
