@@ -37,10 +37,10 @@ class Color:
         self.codes = codes
 
     def __mod__(self, other):
-        if type(other) == str:
-            return paint(*self.codes) + other + FORMAT % CODES.RESET
         if type(other) == Color:
             return Color(*{*self.codes, *other.codes})
+        else:
+            return paint(*self.codes) + str(other) + FORMAT % CODES.RESET
         return other
 
     def __add__(self, other):
