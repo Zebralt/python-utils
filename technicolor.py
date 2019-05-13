@@ -82,7 +82,6 @@ class Color:
         self.codes = codes
 
     def __mod__(self, other):
-        print('__mod__', self, other)
         if type(other) == Color:
             return Color(*{*self.codes, *other.codes})
         else:
@@ -106,8 +105,8 @@ class Color:
         raise ValueError
     
     def __str__(self):
-        # return 'X1B' + str(self.codes)
-        return paint(*self.codes)
+        return 'X1B' + str(self.codes)
+        # return paint(*self.codes)
 
     def __repr__(self):
         return 'Color' + str(self.codes)
@@ -276,18 +275,63 @@ def test_colored_format():
     print('cb', '{:<30}'.format(Y % BG.K % 'this is'), '|')
 
 
+
+import funop as kungfoo
+
+@kungfoo.__rmatmul__
+def colorize(text):
+    
+    regex = r'/(.*?)(/:.+?)?/([A-Z, .]+)/'
+    updated_text = text
+
+    match = re.search(regex, updated_text)
+
+    while match:
+        
+        target, format_info, color_info = match.groups()
+        a, b = match.span()
+
+        if format_info:
+            print(format_info)
+            format_info = format_info[2:]
+            print(format_info)
+            target = target.__format__(format_info)
+
+        colors = color_info.split(',')
+        colors = map(str.strip, colors)
+
+        for color in colors:
+            color_obj = None
+            color_loc = globals()
+            for item in color.split('.'):
+                color_obj = color_loc[item]
+                color_loc = color_obj.__dict__
+
+            target = color_obj % target
+
+        updated_text = updated_text[:a] + target + updated_text[b:]
+
+        match = re.search(regex, updated_text)
+
+    return updated_text
+
+
 if __name__ == '__main__':
 
     # demo()
     # test_colored_format()
 
-    print(make_hyperlink('Click here!', 'https://google.com'))
-    # print(HYPERLINK('https://google.com') % 'Click here')
-    # 'Click here' @link('google.com')
+    # print(make_hyperlink('Click here!', 'https://google.com'))
+    # # print(HYPERLINK('https://google.com') % 'Click here')
+    # # 'Click here' @link('google.com')
     
-    print('text' @GREEN @BG.RED)
-    print(CYAN@ 'text' @REVERSE)
+    # print('text' @GREEN @BG.RED)
+    # print(CYAN@ 'text' @REVERSE)
 
-    # This way, it becomes compatible with basic format strings:
-    print('{%s}' % 'this' @GREEN + ' is')
-    print(GREEN % '{%s}' % 'this')
+    # # This way, it becomes compatible with basic format strings:
+    # print('{%s}' % 'this' @GREEN + ' is')
+    # print(GREEN % '{%s}' % 'this')
+
+    a = r'This is a /red {name}/C/ and an /ugly yellow string/Y/'.format(name=3443) @colorize
+    print(a)
+    # print(a.format(name='John'))
