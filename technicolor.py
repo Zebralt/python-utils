@@ -1,4 +1,8 @@
 
+import pydoc
+import re
+
+
 """
 A simple module to elegantly add color to text printed in terminal.
 Using the mod operator, you can use easily insert it in your string format statements :
@@ -28,6 +32,7 @@ print('This is normal text')
 CONTROL = '\033'
 FORMAT =  CONTROL + '[%sm'
 ENABLED = True 
+MODE = 'light'
 
 # from functools import wraps
 # def wrap_result(fun):
@@ -79,6 +84,11 @@ class Color:
             )
         return other
 
+    def __matmul__(self, other):
+        return self.__mod__(other)
+    def __rmatmul__(self, other):
+        return self.__mod__(other)
+
     def __add__(self, other):
         if type(other) == str:
             return str(self) + other
@@ -104,28 +114,51 @@ class CODES:
         K, R, G, Y, B, M, C, W  = range(90, 98)
 
     class BG:
-        BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(100, 108)
+        BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = MODE == 'light' and range(100, 108) or range(40, 48)
         K, R, G, Y, B, M, C, W  = range(100, 108)
 
 
-class FG:
-    # GRAY = Color(2)
-    BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = map(Color, range(90, 98))
-    K, R, G, Y, B, M, C, W  = map(Color, range(90, 98))
+# class FG:
+#     # GRAY = Color(2)
+#     BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = map(Color, MODE == 'light' and range(90, 98) or range(30, 38))
+#     K, R, G, Y, B, M, C, W  = map(Color, range(90, 98))
+
+
+class FG: pass
+for name, value in vars(CODES.FG).items():
+    if not re.match(r'^[A-Z]+$', name): continue
+    setattr(FG, name, Color(value))
+
+class BG: pass
+for name, value in vars(CODES.BG).items():
+    if not re.match(r'^[A-Z]+$', name): continue
+    setattr(BG, name, Color(value))
+
+
+# class BG:
+#     BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = map(Color, range(100, 108))
+#     K, R, G, Y, B, M, C, W  = map(Color, range(100, 108))
 
 # GRAY = Color(2)
-BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = map(Color, range(90, 98))
-K, R, G, Y, B, M, C, W  = map(Color, range(90, 98))
+# BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = map(Color, MODE == 'light' and range(90, 98) or range(30, 38))
+# K, R, G, Y, B, M, C, W  = map(Color, range(90, 98))
 
+for name, value in vars(FG).items():
+    globals()[name] = value
+
+RESET = Color(CODES.RESET)
 BOLD = BO = Color(1)
 ITALIC = IT = Color(3)
 UNDERLINE = UL = Color(4)
 BLINK = BL = Color(5)
 REVERSE = REV = Color(7)
+# https://en.wikipedia.org/wiki/ANSI_escape_code
+CONCEAL = Color(8)
+DOUBLE_UNDERLINE = Color(21)
+FRAME = Color(51)
+ENCIRCLE = Color(52)
+OVERLINE = Color(53)
 
-class BG:
-    BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = map(Color, range(100, 108))
-    K, R, G, Y, B, M, C, W  = map(Color, range(100, 108))
 
 RESET = Color(CODES.RESET)
 
@@ -137,10 +170,8 @@ def make_hyperlink(title, url):
     # return '\n'.join(lines)
 
 
-import pydoc
 
 def demo():
-    import re
 
     output = []
 
@@ -181,8 +212,11 @@ def demo():
 
     for item, target in list(to_show.items()):
 
-        to_show[item + '.dark'] = target.dark
-        to_show[item + '.light'] = target
+        if target.codes != target.dark.codes:
+            to_show[item + '.dark'] = target.dark
+
+        if target.codes != target.light.codes:
+            to_show[item + '.light'] = target
 
     for idx, (item, target) in enumerate(sorted(to_show.items(), key=lambda x: x[0].count('.'))):
     
@@ -193,7 +227,7 @@ def demo():
         implementation that removes
         """
 
-        line += '{:30}'.format(target % item)
+        line += '{:-4}:'.format(target.codes[0]) + '{:30}'.format(target % item)
 
         if not (idx - 2)%3:
             output += [line]
@@ -238,22 +272,6 @@ class ColoredText(str):
 
         return self.inner.__format__(info)
 
-    # def __str__(self):
-    #     return self.inner
-
-    # def __repr__(self):
-    #     return repr(self.inner)
-
-    # def __add__(self, other):
-    #     if type(other) == ColoredText:
-    #         print('hey!')
-    #     return self.inner + other
-
-    # def __eq__(self, other):
-    #     print('S', self.inner, type(self))
-    #     print('O', other.inner, type(other))
-    #     return self.inner == other.inner
-
 
 def test_colored_format():
     
@@ -263,15 +281,10 @@ def test_colored_format():
     print('   {:<30}'.format(RED % 'this is'), '|')
     print('   {:<30}'.format(BG.RED % 'this is'), '|')
 
-    # ct = ColoredText('this is', color=RED)
-    # print('ct', '{:<30}'.format(ct), '|')
-
     assert ColoredText(RED % 'this is') == RED % 'this is'
 
     xt = ColoredText(RED % 'this is')
     print('xt', '{:<30}'.format(xt), '|')
-
-    # print('---' * 30)
 
     vt = ColoredText(RED % 'this ' + BLUE % 'i' + YELLOW % 's')
     print('vt', '{:<30}'.format(vt), '|')
@@ -282,11 +295,12 @@ def test_colored_format():
 
 if __name__ == '__main__':
 
-    # test_colored_format()
     demo()
-    
-    print(BLUE % 'text')
-    print(YELLOW.light % 'text')
-    print(Y.dark % 'text')
+    # test_colored_format()
 
-    # print(make_hyperlink('Click here!', 'https://google.com'))
+    print(make_hyperlink('Click here!', 'https://google.com'))
+    # print(HYPERLINK('https://google.com') % 'Click here')
+    # 'Click here' @link('google.com')
+    
+    print('text' @GREEN @BG.RED)
+    print(CYAN@ 'text' @REVERSE)
