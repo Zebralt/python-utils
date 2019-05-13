@@ -34,17 +34,23 @@ FORMAT =  CONTROL + '[%sm'
 ENABLED = True 
 MODE = 'light'
 
-# from functools import wraps
-# def wrap_result(fun):
-#     def decorator(xfun):
-#         @wraps(xfun)
-#         def wrapper(*args, **kwargs):
-#             return fun(xfun(*args, **kwargs))
-#         return wrapper
-#     return decorator
+
+__all__ = [
+    'FG', 'BG', 
+    'RED', 'BLUE', 
+    'BLACK', 'YELLOW', 
+    'MAGENTA', 'CYAN', 
+    'GREEN', 'RESET',
+    'REVERSE', 'BLINK',
+    'BOLD', 'UNDERLINE', 'ITALIC',
+    'OVERLINE',
+    'Color',
+    'ColoredText',
+    'demo', 'make_hyperlink',
+    'CODES'
+]
 
 
-# @wrap_result(ColoredText)
 def paint(*codes):
     return (FORMAT % ';'.join(map(str, codes))) * ENABLED
 
@@ -76,6 +82,7 @@ class Color:
         self.codes = codes
 
     def __mod__(self, other):
+        print('__mod__', self, other)
         if type(other) == Color:
             return Color(*{*self.codes, *other.codes})
         else:
@@ -84,6 +91,8 @@ class Color:
             )
         return other
 
+    # def __rmod__(self, other):
+    #     return self.__mod__(other)
     def __matmul__(self, other):
         return self.__mod__(other)
     def __rmatmul__(self, other):
@@ -91,13 +100,14 @@ class Color:
 
     def __add__(self, other):
         if type(other) == str:
-            return str(self) + other
+            return paint(*self.codes) + other
         if type(other) == Color:
             return Color(*{*self.codes, *other.codes})
         raise ValueError
     
     def __str__(self):
-        return 'X1B' + str(self.codes)
+        # return 'X1B' + str(self.codes)
+        return paint(*self.codes)
 
     def __repr__(self):
         return 'Color' + str(self.codes)
@@ -110,18 +120,12 @@ class CODES:
     RESET = 0
     class FG:
         # GRAY = 2
-        BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(90, 98)
-        K, R, G, Y, B, M, C, W  = range(90, 98)
+        BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = MODE == 'light' and range(90, 98) or range(30, 38)
+        K, R, G, Y, B, M, C, W  = MODE == 'light' and range(90, 98) or range(30, 38)
 
     class BG:
         BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = MODE == 'light' and range(100, 108) or range(40, 48)
-        K, R, G, Y, B, M, C, W  = range(100, 108)
-
-
-# class FG:
-#     # GRAY = Color(2)
-#     BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = map(Color, MODE == 'light' and range(90, 98) or range(30, 38))
-#     K, R, G, Y, B, M, C, W  = map(Color, range(90, 98))
+        K, R, G, Y, B, M, C, W  = MODE == 'light' and range(100, 108) or range(40, 48)
 
 
 class FG: pass
@@ -135,16 +139,9 @@ for name, value in vars(CODES.BG).items():
     setattr(BG, name, Color(value))
 
 
-# class BG:
-#     BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = map(Color, range(100, 108))
-#     K, R, G, Y, B, M, C, W  = map(Color, range(100, 108))
-
-# GRAY = Color(2)
-# BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = map(Color, MODE == 'light' and range(90, 98) or range(30, 38))
-# K, R, G, Y, B, M, C, W  = map(Color, range(90, 98))
-
 for name, value in vars(FG).items():
     globals()[name] = value
+
 
 RESET = Color(CODES.RESET)
 BOLD = BO = Color(1)
@@ -216,36 +213,23 @@ def demo():
             to_show[item + '.dark'] = target.dark
 
         if target.codes != target.light.codes:
-            to_show[item + '.light'] = target
+            to_show[item + '.light'] = target.light
 
     for idx, (item, target) in enumerate(sorted(to_show.items(), key=lambda x: x[0].count('.'))):
-    
 
-        """
-        Coloring charaters throws off the formatting ...
-        Maybe we could have ColoredText act like a str with a different __format__ / __str__ / __repr__ / __len__
-        implementation that removes
-        """
+        if item.startswith('BG'):
+            target = target % FG.K.dark
 
-        line += '{:-4}:'.format(target.codes[0]) + '{:30}'.format(target % item)
+        line += FG.C % '{:-3}:'.format(target.codes[0]) + FG.W.dark % '{:20}'.format('(%s)' % item) + '{:20}'.format(target % item)
 
         if not (idx - 2)%3:
             output += [line]
-            line = ''
+            line = ' '
 
     output = '\n'.join(output) + '\n'
     output = UL % 'Demonstrating colors:\n\n '.title() + output
+
     pydoc.pipepager(output, cmd='less -R')
-    # print(output)
-
-
-import re
-
-def strip_control_characters(text):
-    return re.sub(r'\x1b\[[0-9;]+m', '', text)
-
-def find_control_characters(text):
-    return re.findall(r'\x1b\[[0-9;]+m', text)
 
 
 class ColoredText(str):
@@ -262,11 +246,10 @@ class ColoredText(str):
 
         m = re.search(regex, info)
         if m:
-        # find special chars
-            specs = find_control_characters(self.inner)
-        # Now, edit format if number in it:
+            specs = re.findall(r'\x1b\[[0-9;]+m', self.inner)
             added_length = sum(map(len, specs))
             new_length = int(m.group()) + added_length
+            
             a, b = m.span()
             info = ''.join((info[:a], str(new_length), info[b:]))
 
@@ -295,7 +278,7 @@ def test_colored_format():
 
 if __name__ == '__main__':
 
-    demo()
+    # demo()
     # test_colored_format()
 
     print(make_hyperlink('Click here!', 'https://google.com'))
@@ -304,3 +287,7 @@ if __name__ == '__main__':
     
     print('text' @GREEN @BG.RED)
     print(CYAN@ 'text' @REVERSE)
+
+    # This way, it becomes compatible with basic format strings:
+    print('{%s}' % 'this' @GREEN + ' is')
+    print(GREEN % '{%s}' % 'this')
