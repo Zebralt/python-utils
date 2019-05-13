@@ -43,8 +43,30 @@ ENABLED = True
 def paint(*codes):
     return (FORMAT % ';'.join(map(str, codes))) * ENABLED
 
-# should inherit from str
+
+class Brightness:
+    def __get__(self, instance, owner):
+        newcodes = [
+            c + 60 if c in range(30, 50) else c
+            for c in instance.codes            
+        ]
+        return Color(*newcodes)
+
+class Darkness:
+    def __get__(self, instance, owner):
+        newcodes = [
+            c - 60 if c in range(90, 110) else c
+            for c in instance.codes            
+        ]
+        return Color(*newcodes)
+
+
 class Color:
+
+    dark = Darkness()
+    light = Brightness()
+    bright = light
+
     def __init__(self, *codes):
         self.codes = codes
 
@@ -77,7 +99,7 @@ class Color:
 class CODES:
     RESET = 0
     class FG:
-        GRAY = 2
+        # GRAY = 2
         BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(90, 98)
         K, R, G, Y, B, M, C, W  = range(90, 98)
 
@@ -87,11 +109,11 @@ class CODES:
 
 
 class FG:
-    GRAY = Color(2)
+    # GRAY = Color(2)
     BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = map(Color, range(90, 98))
     K, R, G, Y, B, M, C, W  = map(Color, range(90, 98))
 
-GRAY = Color(2)
+# GRAY = Color(2)
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = map(Color, range(90, 98))
 K, R, G, Y, B, M, C, W  = map(Color, range(90, 98))
 
@@ -115,8 +137,12 @@ def make_hyperlink(title, url):
     # return '\n'.join(lines)
 
 
+import pydoc
+
 def demo():
     import re
+
+    output = []
 
     to_show = {}
 
@@ -145,12 +171,20 @@ def demo():
             if len(item) <= 3 and item not in ['RED']:
                 continue
 
+            if namespace == BG:
+                target = target % Color(30)
+
             item = namespace.__name__ + '.' + item
             to_show[item] = target
             
     line = ""
 
-    for idx, (item, target) in enumerate(to_show.items()):
+    for item, target in list(to_show.items()):
+
+        to_show[item + '.dark'] = target.dark
+        to_show[item + '.light'] = target
+
+    for idx, (item, target) in enumerate(sorted(to_show.items(), key=lambda x: x[0].count('.'))):
     
 
         """
@@ -161,21 +195,23 @@ def demo():
 
         line += '{:30}'.format(target % item)
 
-        if not (idx - 1)%3:
-            print(line)
+        if not (idx - 2)%3:
+            output += [line]
             line = ''
 
-    print()
-
+    output = '\n'.join(output) + '\n'
+    output = UL % 'Demonstrating colors:\n\n '.title() + output
+    pydoc.pipepager(output, cmd='less -R')
+    # print(output)
 
 
 import re
 
 def strip_control_characters(text):
-    return re.sub(r'\x1b\[[0-9]+m', '', text)
+    return re.sub(r'\x1b\[[0-9;]+m', '', text)
 
 def find_control_characters(text):
-    return re.findall(r'\x1b\[[0-9]+m', text)
+    return re.findall(r'\x1b\[[0-9;]+m', text)
 
 
 class ColoredText(str):
@@ -219,8 +255,8 @@ class ColoredText(str):
     #     return self.inner == other.inner
 
 
-if __name__ == '__main__':
-
+def test_colored_format():
+    
     print('The following lines should have the same length on screen: ')
     
     print('   {:<30}'.format('this is'), '|')
@@ -240,8 +276,17 @@ if __name__ == '__main__':
     vt = ColoredText(RED % 'this ' + BLUE % 'i' + YELLOW % 's')
     print('vt', '{:<30}'.format(vt), '|')
 
+    print('cb', '{:<30}'.format(Y % BG.K % REVERSE % 'this is'), '|')
+    print('cb', '{:<30}'.format(Y % BG.K % 'this is'), '|')
 
+
+if __name__ == '__main__':
+
+    # test_colored_format()
     demo()
     
+    print(BLUE % 'text')
+    print(YELLOW.light % 'text')
+    print(Y.dark % 'text')
 
     # print(make_hyperlink('Click here!', 'https://google.com'))
